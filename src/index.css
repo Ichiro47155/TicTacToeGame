@@ -44,8 +44,7 @@ body {
 }
 
 /* Style des cases (boutons React) */
-.square {
-  width: 100px;
+.square, .restartButton button {
   height: 100px;
   background: transparent;
   border: 1px solid var(--border-color);
@@ -60,12 +59,20 @@ body {
   transition: background 0.2s ease;
 }
 
-.square:focus {
+.square {
+  width: 100px;
+}
+
+.restartButton {
+  width: 300px;
+}
+
+.square:focus, .restartButton button:focus {
   outline: 2px solid var(--text-color);
   outline-offset: -4px;
 }
 
-.square:hover {
+.square:hover, .restartButton button:hover {
   background-color: var(--hover-color);
 }
 
