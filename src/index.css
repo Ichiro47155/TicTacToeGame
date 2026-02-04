@@ -1,54 +1,73 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* Reset et centrage du conteneur principal */
 body {
   margin: 0;
   display: flex;
-  place-items: center;
-  min-width: 100vw;
+  justify-content: center;
+  align-items: center;
   min-height: 100vh;
+  /* Transition douce pour le changement de thème */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-button {
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 4em;
-  height: 2em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #ffc164;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Gestion automatique des couleurs (Thème Clair par défaut) */
+:root {
+  --bg-color: #f0f0f0;      /* Gris très clair */
+  --text-color: #333333;    /* Gris foncé (moins agressif que le noir) */
+  --border-color: #cccccc;  /* Gris moyen pour les bordures */
+  --hover-color: #e0e0e0;
 }
 
-@media (prefers-color-scheme: light) {
+/* Thème Sombre automatique */
+@media (prefers-color-scheme: dark) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    --bg-color: #1a1a1a;    /* Anthracite */
+    --text-color: #d1d1d1;  /* Gris clair */
+    --border-color: #444444;/* Gris sombre */
+    --hover-color: #2a2a2a;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: sans-serif;
+}
+
+/* Structure du plateau */
+.board-row {
+  display: flex;
+}
+
+/* Style des cases (boutons React) */
+.square {
+  width: 100px;
+  height: 100px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.square:focus {
+  outline: 2px solid var(--text-color);
+  outline-offset: -4px;
+}
+
+.square:hover {
+  background-color: var(--hover-color);
+}
+
+/* Suppression des doubles bordures */
+.board-row:not(:last-child) .square {
+  border-bottom: none;
+}
+.square:not(:last-child) {
+  border-right: none;
 }
