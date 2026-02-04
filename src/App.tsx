@@ -30,83 +30,101 @@ function Board({ squares, onSquareClick }: { squares: Array<string | null>, onSq
   );
 }
 
-function GameModeSelection({ onSelectMode }: { onSelectMode: (mode: 'human' | 'ai') => void }) {
+function GameModeSelection({ onSelectMode }: { onSelectMode: (mode: 'human' | 'ai' | 'ai_vs_ai') => void }) {
   return (
     <div className="game-mode-selection">
-      <h2>Do you want to play against a human or the computer?</h2>
-      <button onClick={() => onSelectMode('human')}>Play against a friend</button>
-      <button onClick={() => onSelectMode('ai')}>Play against AI</button>
+      <h2>Select Game Mode</h2>
+      <button onClick={() => onSelectMode('human')}>Human vs Human</button>
+      <button onClick={() => onSelectMode('ai')}>Play vs Unbeatable AI</button>
+      <button onClick={() => onSelectMode('ai_vs_ai')}>AI vs AI Spectate</button>
     </div>
   );
 }
 
 function Game() {
-  const [gameMode, setGameMode] = useState<'human' | 'ai' | null>(null);
+  const [gameMode, setGameMode] = useState<'human' | 'ai' | 'ai_vs_ai' | null>(null);
   const [xIsNext, setXIsNext] = useState(true);
   const [squares, setSquares] = useState<Array<string | null>>(Array(9).fill(null));
 
   useEffect(() => {
-    if (gameMode === 'ai' && !xIsNext && !calculateWinner(squares)) {
-      const bestMove = findBestMove(squares);
+    if (calculateWinner(squares) || squares.every(s => s !== null)) {
+      return;
+    }
+
+    if ((gameMode === 'ai' && !xIsNext) || gameMode === 'ai_vs_ai') {
+      const currentPlayer = xIsNext ? 'X' : 'O';
+      const bestMove = findBestMove(squares, currentPlayer);
       if (bestMove !== null) {
-        setTimeout(() => {
-          handleSquareClick(bestMove);
-        }, 500);
+        const timeout = setTimeout(() => {
+          const nextSquares = squares.slice();
+          nextSquares[bestMove] = currentPlayer;
+          setSquares(nextSquares);
+          setXIsNext(!xIsNext);
+        }, 600);
+        return () => clearTimeout(timeout);
       }
     }
   }, [xIsNext, squares, gameMode]);
 
+  function findBestMove(currentSquares: Array<string | null>, player: 'X' | 'O'): number | null {
+    let bestScore = -Infinity;
+    let move = null;
+    const opponent = player === 'X' ? 'O' : 'X';
 
-  function findBestMove(currentSquares: Array<string | null>): number | null {
-    // 1. Check for a winning move for 'O'
     for (let i = 0; i < 9; i++) {
       if (currentSquares[i] === null) {
-        const nextSquares = currentSquares.slice();
-        nextSquares[i] = 'O';
-        if (calculateWinner(nextSquares) === 'O') {
-          return i;
+        currentSquares[i] = player;
+        let score = minimax(currentSquares, 0, false, player, opponent);
+        currentSquares[i] = null;
+        if (score > bestScore) {
+          bestScore = score;
+          move = i;
         }
       }
     }
-
-    // 2. Check to block 'X' from winning
-    for (let i = 0; i < 9; i++) {
-      if (currentSquares[i] === null) {
-        const nextSquares = currentSquares.slice();
-        nextSquares[i] = 'X';
-        if (calculateWinner(nextSquares) === 'X') {
-          return i;
-        }
-      }
-    }
-
-    // 3. Take the center if available
-    if (currentSquares[4] === null) {
-      return 4;
-    }
-
-    // 4. Take any of the corners
-    const corners = [0, 2, 6, 8];
-    const availableCorners = corners.filter(i => currentSquares[i] === null);
-    if (availableCorners.length > 0) {
-      return availableCorners[Math.floor(Math.random() * availableCorners.length)];
-    }
-
-    // 5. Take any of the sides
-    const sides = [1, 3, 5, 7];
-    const availableSides = sides.filter(i => currentSquares[i] === null);
-    if (availableSides.length > 0) {
-      return availableSides[Math.floor(Math.random() * availableSides.length)];
-    }
-
-    return null; // Should not be reached if there are empty squares
+    return move;
   }
 
+  function minimax(board: Array<string | null>, depth: number, isMaximizing: boolean, player: string, opponent: string): number {
+    const winner = calculateWinner(board);
+    if (winner === player) return 10 - depth;
+    if (winner === opponent) return depth - 10;
+    if (board.every(s => s !== null)) return 0;
+
+    if (isMaximizing) {
+      let bestScore = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = player;
+          let score = minimax(board, depth + 1, false, player, opponent);
+          board[i] = null;
+          bestScore = Math.max(score, bestScore);
+        }
+      }
+      return bestScore;
+    } else {
+      let bestScore = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = opponent;
+          let score = minimax(board, depth + 1, true, player, opponent);
+          board[i] = null;
+          bestScore = Math.min(score, bestScore);
+        }
+      }
+      return bestScore;
+    }
+  }
 
   function handleSquareClick(i: number) {
     if (squares[i] || calculateWinner(squares)) {
       return;
     }
+
+    // Prevent human from playing during AI modes or AI turns
+    if (gameMode === 'ai' && !xIsNext) return;
+    if (gameMode === 'ai_vs_ai') return;
+
     const nextSquares = squares.slice();
     nextSquares[i] = xIsNext ? "X" : "O";
     setSquares(nextSquares);
@@ -118,7 +136,7 @@ function Game() {
     setXIsNext(true);
   }
 
-  function handleGameModeSelect(mode: 'human' | 'ai') {
+  function handleGameModeSelect(mode: 'human' | 'ai' | 'ai_vs_ai') {
     setGameMode(mode);
     restartGame();
   }
@@ -136,12 +154,14 @@ function Game() {
   return (
     <div className="game">
       <div className="game-board">
-      {gameMode ? (
+        {gameMode ? (
           <>
             <div className="status">{status}</div>
             <Board squares={squares} onSquareClick={handleSquareClick} />
-            <div className='restartButton'><button className='restartButton' onClick={restartGame}>Restart</button></div>
-            <button onClick={() => setGameMode(null)}>Change Mode</button>
+            <div className="button-container">
+              <button className='restartButton' onClick={restartGame}>Restart</button>
+              <button className="change-mode-button" onClick={() => setGameMode(null)}>Change Mode</button>
+            </div>
           </>
         ) : (
           <GameModeSelection onSelectMode={handleGameModeSelect} />
@@ -163,7 +183,7 @@ function calculateWinner(squares: Array<string | null>): string | null {
     [2, 4, 6]
   ];
   for (let i = 0; i < lines.length; i++) {
-    const [a, b , c] = lines[i];
+    const [a, b, c] = lines[i];
     if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
       return squares[a];
     }

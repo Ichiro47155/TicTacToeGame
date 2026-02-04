@@ -16,18 +16,24 @@ body {
 
 /* Gestion automatique des couleurs (Thème Clair par défaut) */
 :root {
-  --bg-color: #f0f0f0;      /* Gris très clair */
-  --text-color: #333333;    /* Gris foncé (moins agressif que le noir) */
-  --border-color: #cccccc;  /* Gris moyen pour les bordures */
+  --bg-color: #f0f0f0;
+  /* Gris très clair */
+  --text-color: #333333;
+  /* Gris foncé (moins agressif que le noir) */
+  --border-color: #cccccc;
+  /* Gris moyen pour les bordures */
   --hover-color: #e0e0e0;
 }
 
 /* Thème Sombre automatique */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-color: #1a1a1a;    /* Anthracite */
-    --text-color: #d1d1d1;  /* Gris clair */
-    --border-color: #444444;/* Gris sombre */
+    --bg-color: #1a1a1a;
+    /* Anthracite */
+    --text-color: #d1d1d1;
+    /* Gris clair */
+    --border-color: #444444;
+    /* Gris sombre */
     --hover-color: #2a2a2a;
   }
 }
@@ -44,7 +50,8 @@ body {
 }
 
 /* Style des cases (boutons React) */
-.square, .restartButton button {
+.square,
+.restartButton button {
   height: 100px;
   background: transparent;
   border: 1px solid var(--border-color);
@@ -63,16 +70,14 @@ body {
   width: 100px;
 }
 
-.restartButton {
-  width: 300px;
-}
-
-.square:focus, .restartButton button:focus {
+.square:focus,
+.restartButton button:focus {
   outline: 2px solid var(--text-color);
   outline-offset: -4px;
 }
 
-.square:hover, .restartButton button:hover {
+.square:hover,
+.restartButton button:hover {
   background-color: var(--hover-color);
 }
 
@@ -80,6 +85,7 @@ body {
 .board-row:not(:last-child) .square {
   border-bottom: none;
 }
+
 .square:not(:last-child) {
   border-right: none;
 }
@@ -90,7 +96,7 @@ body {
   font-size: 3rem;
   font-weight: 500;
   color: rgb(125, 59, 128);
-  font-family: "Beabas Neue", sans-serif;
+  font-family: "Bebas Neue", sans-serif;
   font-weight: bolder;
 }
 
@@ -110,7 +116,9 @@ body {
   color: rgb(125, 59, 128);
 }
 
-.game-mode-selection button, .change-mode-button {
+.game-mode-selection button,
+.change-mode-button,
+.restartButton {
   background-color: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-color);
@@ -120,13 +128,30 @@ body {
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
   border-radius: 5px;
+  width: 100%;
 }
 
-.game-mode-selection button:hover, .change-mode-button:hover {
+.game-mode-selection button:hover,
+.change-mode-button:hover,
+.restartButton:hover {
   background-color: var(--hover-color);
 }
 
-.game-mode-selection button:focus, .change-mode-button:focus {
+.game-mode-selection button:focus,
+.change-mode-button:focus,
+.restartButton:focus {
   outline: 2px solid var(--text-color);
   outline-offset: 2px;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
+  width: 300px;
+  margin-top: 10px;
+}
+
+.button-container button {
+  flex: 1;
+  margin: 0;
 }
