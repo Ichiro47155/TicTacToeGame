@@ -1,3 +1,8 @@
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+
+
 /* Reset et centrage du conteneur principal */
 body {
   margin: 0;
@@ -70,4 +75,14 @@ body {
 }
 .square:not(:last-child) {
   border-right: none;
+}
+
+/* Style du statut du jeu */
+.status {
+  margin-bottom: 15px;
+  font-size: 3rem;
+  font-weight: 500;
+  color: rgb(125, 59, 128);
+  font-family: "Beabas Neue", sans-serif;
+  font-weight: bolder;
 }

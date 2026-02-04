@@ -9,14 +9,21 @@ function Square({ value, onSquareClick }: { value: string | null, onSquareClick:
 }
 
 function Board() {
+  const [xIsNext, setXIsNext] = useState(true);
   const [squares, setSquares] = useState<Array<string | null>>(Array(9).fill(null));
+
   function handleClick(i: number) {
+    if (squares[i]) {
+      return;
+    }
     const nextSquares = squares.slice();
-    nextSquares[i] = "X";
+    nextSquares[i] = xIsNext ? "X" : "O";
+    setXIsNext(!xIsNext);
     setSquares(nextSquares);
   }
   return (
     <>
+      <div className="status">{xIsNext ? "X's turn" : "O's turn"}</div>
       <div className="board-row">
         <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
         <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
