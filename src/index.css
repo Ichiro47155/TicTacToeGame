@@ -50,13 +50,19 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--bg-color);
+  /* Neutral background by default */
+  background: var(--bg-color);
+  background-attachment: fixed;
   color: var(--text-color);
   font-family: 'Inter', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Board Container */
+/* Vibrant glow only during gameplay */
+body.playing {
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--current-player-color, var(--accent-color)), transparent 65%) 0%, var(--bg-color) 85%);
+}
+
 .game-wrapper {
   display: flex;
   justify-content: center;
@@ -72,7 +78,6 @@ body {
   gap: 0;
   background-color: var(--border-color);
   border: 1px solid var(--border-color);
-  /* Responsive size: smaller of 90vw or 70vh */
   width: min(90vw, 70vh);
   height: min(90vw, 70vh);
   max-width: 800px;
@@ -84,7 +89,6 @@ body {
   aspect-ratio: 1 / 1;
   background: var(--bg-color);
   border: 0.1px solid var(--border-color);
-  /* Refined font size: ensures visibility even in nested 10x10 Ultimate sub-boards */
   font-size: clamp(6px, calc(30vh / var(--grid-size)), 32px);
   font-weight: bold;
   color: var(--text-color);
@@ -93,97 +97,219 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background 0.2s ease;
+  transition: background 0.3s ease, transform 0.2s ease, color 0.3s ease;
   overflow: hidden;
 }
 
 .square:hover:not(:disabled) {
   background-color: var(--hover-color);
+  transform: scale(0.98);
 }
 
 .square:disabled {
   cursor: default;
 }
 
-/* Controls & Status */
-.game-controls {
+.square:not([data-player=""]) {
+  color: var(--player-color);
+  background: color-mix(in srgb, var(--player-color), var(--bg-color) 90%);
+  text-shadow: 0 0 15px color-mix(in srgb, var(--player-color), transparent 40%);
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Loading & Intro Screens */
+.loading-screen,
+.intro-screen {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin: 20px 0;
   align-items: center;
+  justify-content: center;
+  gap: 30px;
   width: 100%;
+  height: 60vh;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
 }
 
-.game-controls.bottom {
-  margin-top: 5px;
+.loading-screen p {
+  font-size: 1.2rem;
+  opacity: 0.8;
 }
 
-.speed-controls {
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+.intro-screen h2 {
+  font-size: 3rem;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 4px;
+  color: var(--accent-color);
+  margin: 0;
+  text-shadow: 0 0 20px color-mix(in srgb, var(--accent-color), transparent 50%);
+}
+
+.player-vs {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 40px;
+}
+
+.p-card {
+  padding: 20px;
+  border: 2px solid;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-color), transparent 50%);
+  backdrop-filter: blur(10px);
+  min-width: 120px;
+}
+
+.p-card p {
+  margin: 10px 0 0 0;
   font-size: 0.9rem;
   opacity: 0.8;
 }
 
-.speed-controls button {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s;
-  width: auto;
+.p-icon {
+  font-size: 4rem;
+  font-weight: 900;
+  display: block;
 }
 
-.speed-controls button:hover {
-  background: var(--hover-color);
+.vs-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  opacity: 0.5;
 }
 
-.speed-controls button.active {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.button-group {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: var(--hover-color);
-  transform: translateY(-1px);
-}
-
-.action-btn.exit {
+.rules {
+  font-size: 1.1rem;
   opacity: 0.7;
 }
 
-.status {
-  font-size: 1.8rem;
+.rules p {
+  margin: 5px 0;
+}
+
+.skip-intro-btn {
+  padding: 15px 40px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-radius: 30px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 5px 15px color-mix(in srgb, var(--accent-color), transparent 70%);
+  transition: transform 0.2s;
+}
+
+.skip-intro-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Since we can't easily target text content in CSS, let's update App.tsx to add data-player attribute */
+
+/* Color Selectors in Menu */
+.color-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  margin: 15px 0;
+}
+
+.color-input-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px;
+  background: var(--hover-color);
+  border-radius: 8px;
+}
+
+.color-input-group label {
+  font-size: 0.9rem;
   font-weight: 500;
-  color: var(--accent-color);
+}
+
+.color-input-group input[type="color"] {
+  border: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.color-input-group.disabled {
+  opacity: 0.6;
+}
+
+.color-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.status {
+  font-size: 3.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
   font-family: "Bebas Neue", sans-serif;
   text-align: center;
-  margin-bottom: 10px;
+  margin: 20px 0;
+  transition: all 0.4s ease;
+  text-shadow: 0 0 20px color-mix(in srgb, var(--current-player-color, var(--accent-color)), transparent 50%);
+  letter-spacing: 2px;
 }
 
 .game-mode-selection {
@@ -191,13 +317,14 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 30px;
+  padding: 40px;
   text-align: center;
   max-width: 450px;
-  background: var(--bg-color);
+  background: color-mix(in srgb, var(--bg-color), transparent 30%);
+  backdrop-filter: blur(15px);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
 }
 
 .game-mode-selection h2 {
@@ -221,11 +348,12 @@ body {
 }
 
 .selection-group input[type="number"] {
-  width: 80px;
-  padding: 10px;
+  width: 100px;
+  padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  background: var(--bg-color);
+  background: color-mix(in srgb, var(--bg-color), transparent 50%);
+  backdrop-filter: blur(5px);
   color: var(--text-color);
   font-size: 1.2rem;
   text-align: center;
@@ -234,24 +362,30 @@ body {
 
 .game-mode-selection button,
 .change-mode-button,
-.restartButton {
-  background-color: transparent;
+.restartButton,
+.action-btn {
+  background: color-mix(in srgb, var(--bg-color), transparent 50%);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--border-color);
   color: var(--text-color);
   font-size: 1.1rem;
-  padding: 12px 20px;
+  padding: 12px 24px;
   margin: 5px 0;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-radius: 8px;
+  border-radius: 10px;
   width: 100%;
+  font-weight: 500;
 }
 
 .game-mode-selection button:hover,
 .change-mode-button:hover,
-.restartButton:hover {
-  background-color: var(--hover-color);
-  transform: translateY(-1px);
+.restartButton:hover,
+.action-btn:hover {
+  background: var(--hover-color);
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .start-btn {
@@ -259,6 +393,7 @@ body {
   color: white !important;
   font-weight: bold;
   margin-top: 10px !important;
+  box-shadow: 0 5px 15px color-mix(in srgb, var(--accent-color), transparent 70%);
 }
 
 .back-btn {
@@ -266,6 +401,7 @@ body {
   border: none !important;
   font-size: 0.9rem !important;
   text-decoration: underline;
+  background: transparent !important;
 }
 
 .button-container {
@@ -278,6 +414,55 @@ body {
 
 .button-container button {
   flex: 1;
+}
+
+/* Game Controls */
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 25px 0;
+  align-items: center;
+  width: 100%;
+}
+
+.speed-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.speed-controls button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-color), transparent 30%);
+  backdrop-filter: blur(5px);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.speed-controls button.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--accent-color), transparent 50%);
+}
+
+.button-group {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  max-width: 450px;
+}
+
+.action-btn.exit {
+  opacity: 0.7;
+  border-style: dashed;
 }
 
 /* Theme Toggle Button */
@@ -320,11 +505,11 @@ body {
   padding: 15px;
   background-color: var(--border-color);
   border-radius: 12px;
-  /* Sync with normal board size */
-  width: min(90vw, 70vh);
-  height: min(90vw, 70vh);
-  max-width: 800px;
-  max-height: 800px;
+  width: min(90vw, 75vh);
+  height: min(90vw, 75vh);
+  max-width: 850px;
+  max-height: 850px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
 .sub-board {
@@ -345,18 +530,19 @@ body {
   height: 100%;
   max-width: none;
   max-height: none;
+  border: none;
+  box-shadow: none;
 }
 
 .sub-board.active {
-  background-color: rgba(125, 59, 128, 0.1);
-  box-shadow: 0 0 15px 2px var(--accent-color);
-  transform: scale(1.03);
+  background-color: color-mix(in srgb, var(--current-player-color, var(--accent-color)), transparent 90%);
+  box-shadow: 0 0 25px 2px var(--current-player-color, var(--accent-color));
+  transform: scale(1.02);
   z-index: 10;
 }
 
 .sub-board.won-X::after,
-.sub-board.won-O::after,
-.sub-board.won-Draw::after {
+.sub-board.won-O::after {
   content: attr(data-winner);
   position: absolute;
   top: 0;
@@ -368,9 +554,28 @@ body {
   align-items: center;
   font-size: 4rem;
   font-weight: bold;
-  color: var(--accent-color);
-  background: rgba(var(--bg-color), 0.8);
+  color: var(--winner-color);
+  background: color-mix(in srgb, var(--winner-color), var(--bg-color) 85%);
   backdrop-filter: blur(4px);
+  border-radius: 8px;
+  z-index: 5;
+}
+
+.sub-board.won-Draw::after {
+  content: "Draw";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--border-color), var(--bg-color) 80%);
+  backdrop-filter: blur(2px);
   border-radius: 8px;
   z-index: 5;
 }

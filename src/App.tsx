@@ -5,7 +5,13 @@ type GameVariant = 'normal' | 'ultimate' | 'ultimate_random';
 
 function Square({ value, onSquareClick, disabled, className }: { value: string | null, onSquareClick: () => void, disabled?: boolean, className?: string }) {
   return (
-    <button className={`square ${className || ''}`} onClick={onSquareClick} disabled={disabled}>
+    <button
+      className={`square ${className || ''}`}
+      onClick={onSquareClick}
+      disabled={disabled}
+      data-player={value || ''}
+      style={value ? ({ '--player-color': value === 'X' ? 'var(--player-x-color)' : 'var(--player-o-color)' } as any) : {}}
+    >
       {value}
     </button>
   );
@@ -25,11 +31,17 @@ function GameSelection({
   setPlayers,
   variant, setVariant,
   gridSize, setGridSize,
+  colorX, setColorX,
+  colorO, setColorO,
+  playerConfig,
   onStart
 }: {
   setPlayers: (p: PlayerConfig) => void,
   variant: GameVariant, setVariant: (v: GameVariant) => void,
   gridSize: number, setGridSize: (s: number) => void,
+  colorX: string, setColorX: (c: string) => void,
+  colorO: string, setColorO: (c: string) => void,
+  playerConfig: PlayerConfig,
   onStart: () => void
 }) {
   const [step, setStep] = useState(1);
@@ -64,13 +76,43 @@ function GameSelection({
             <input
               type="number"
               min="3"
-              max={variant === 'normal' ? 20 : 10}
               value={gridSize}
-              onChange={(e) => setGridSize(Math.min(variant === 'normal' ? 20 : 10, Math.max(3, parseInt(e.target.value) || 3)))}
+              onChange={(e) => setGridSize(Math.max(3, parseInt(e.target.value) || 3))}
             />
           </div>
-          <button className="start-btn" onClick={onStart}>Start Game</button>
+          <button className="start-btn" onClick={() => {
+            if (playerConfig === 'ai_vs_ai') onStart();
+            else setStep(4);
+          }}>Next</button>
           <button className="back-btn" onClick={() => setStep(2)}>Back</button>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="selection-step">
+          <h3>Step 4: Customize Colors</h3>
+          <div className="color-selectors">
+            {(playerConfig === 'human_vs_human' || playerConfig === 'human_vs_ai') && (
+              <div className="color-input-group">
+                <label>Player X Color:</label>
+                <input type="color" value={colorX} onChange={(e) => setColorX(e.target.value)} />
+              </div>
+            )}
+            {playerConfig === 'human_vs_human' && (
+              <div className="color-input-group">
+                <label>Player O Color:</label>
+                <input type="color" value={colorO} onChange={(e) => setColorO(e.target.value)} />
+              </div>
+            )}
+            {playerConfig === 'human_vs_ai' && (
+              <div className="color-input-group disabled">
+                <label>AI O Color:</label>
+                <div className="color-preview" style={{ backgroundColor: colorO }}></div>
+              </div>
+            )}
+          </div>
+          <button className="start-btn" onClick={onStart}>Start Game</button>
+          <button className="back-btn" onClick={() => setStep(3)}>Back</button>
         </div>
       )}
     </div>
@@ -115,6 +157,11 @@ function Game() {
   const [ultimateWinners, setUltimateWinners] = useState<Array<string | null>>(Array(9).fill(null));
   const [activeBoard, setActiveBoard] = useState<number | null>(null);
   const [aiSpeed, setAiSpeed] = useState<number>(600);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+
+  const [colorX, setColorX] = useState('#FFD1A4');
+  const [colorO, setColorO] = useState('#D4B7FF');
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('theme');
@@ -127,7 +174,27 @@ function Game() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+
+    // Update default colors if they haven't been customized
+    const lightX = '#FFD1A4', darkX = '#FFA040';
+    const lightO = '#D4B7FF', darkO = '#B080FF';
+
+    if (colorX === lightX || colorX === darkX) {
+      setColorX(theme === 'light' ? lightX : darkX);
+    }
+    if (colorO === lightO || colorO === darkO) {
+      setColorO(theme === 'light' ? lightO : darkO);
+    }
   }, [theme]);
+
+  useEffect(() => {
+    // Add 'playing' class to body only when game is active and not in intro
+    if (isPlaying && !showIntro) {
+      document.body.classList.add('playing');
+    } else {
+      document.body.classList.remove('playing');
+    }
+  }, [isPlaying, showIntro]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
@@ -228,9 +295,14 @@ function Game() {
 
   const alphaBeta = (board: Array<string | null>, depth: number, alpha: number, beta: number, isMaximizing: boolean, player: string, opponent: string): number => {
     const winner = calculateWinner(board, gridSize, winCondition);
-    if (winner === player) return 1000000 / depth;
-    if (winner === opponent) return -1000000 / depth;
-    const maxDepth = gridSize > 12 ? 1 : (gridSize > 6 ? 2 : 5);
+    if (winner === player) return 1000000 / (depth + 1);
+    if (winner === opponent) return -1000000 / (depth + 1);
+
+    // Depth limit based on complexity
+    let maxDepth = 5;
+    if (gridSize > 15) maxDepth = 1;
+    else if (gridSize > 8) maxDepth = 2;
+    else if (gridSize > 5) maxDepth = 4;
     if (depth >= maxDepth || board.every(s => s !== null)) return evaluateBoard(board, player, opponent);
 
     if (isMaximizing) {
@@ -449,8 +521,17 @@ function Game() {
   };
 
   const onStart = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setShowIntro(true);
+      restartGame();
+    }, 800);
+  };
+
+  const finishIntro = () => {
+    setShowIntro(false);
     setIsPlaying(true);
-    restartGame();
   };
 
   const winner = variant.startsWith('ultimate') ? calculateWinner(ultimateWinners, 3, 3) : calculateWinner(squares, gridSize, winCondition);
@@ -462,13 +543,50 @@ function Game() {
 
 
 
-      <div className="status">{isPlaying ? status : ""}</div>
-      <div className="game-wrapper">
-        {isPlaying ? (
+      <div className="status" style={{ color: 'var(--current-player-color)' }}>
+        {isPlaying && !showIntro ? status : ""}
+      </div>
+
+      <div className="game-wrapper" style={{
+        '--player-x-color': colorX,
+        '--player-o-color': colorO,
+        '--current-player-color': winner ? (winner === 'X' ? colorX : (winner === 'O' ? colorO : 'var(--text-color)')) : (xIsNext ? colorX : colorO)
+      } as any}>
+        {isLoading ? (
+          <div className="loading-screen">
+            <div className="loader"></div>
+            <p>Preparing Battle...</p>
+          </div>
+        ) : showIntro ? (
+          <div className="intro-screen">
+            <h2>{variant.toUpperCase()} MODE</h2>
+            <div className="player-vs">
+              <div className="p-card" style={{ borderColor: colorX }}>
+                <span className="p-icon" style={{ color: colorX }}>X</span>
+                <p>{playerConfig === 'ai_vs_ai' ? 'CPU 1' : 'Player 1'}</p>
+              </div>
+              <div className="vs-badge">VS</div>
+              <div className="p-card" style={{ borderColor: colorO }}>
+                <span className="p-icon" style={{ color: colorO }}>O</span>
+                <p>{playerConfig === 'human_vs_human' ? 'Player 2' : 'CPU'}</p>
+              </div>
+            </div>
+            <div className="rules">
+              <p>Grid: {gridSize}x{gridSize}</p>
+              <p>Win with {winCondition} in a row</p>
+            </div>
+            <button className="skip-intro-btn" onClick={finishIntro}>Ready to Start</button>
+          </div>
+        ) : isPlaying ? (
           variant.startsWith('ultimate') ? (
             <div className="ultimate-board">
               {ultimateBoards.map((board, bIdx) => (
-                <div key={bIdx} className={`sub-board ${activeBoard === bIdx || (activeBoard === null && !ultimateWinners[bIdx]) ? 'active' : ''} ${ultimateWinners[bIdx] ? 'won-' + ultimateWinners[bIdx] : ''}`} data-winner={ultimateWinners[bIdx]}>
+                <div
+                  key={bIdx}
+                  className={`sub-board ${activeBoard === bIdx || (activeBoard === null && !ultimateWinners[bIdx]) ? 'active' : ''} ${ultimateWinners[bIdx] ? 'won-' + ultimateWinners[bIdx] : ''}`}
+                  data-winner={ultimateWinners[bIdx] || ''}
+                  style={ultimateWinners[bIdx] && ultimateWinners[bIdx] !== 'Draw' ? ({ '--winner-color': ultimateWinners[bIdx] === 'X' ? 'var(--player-x-color)' : 'var(--player-o-color)' } as any) : {}}
+                >
                   <Board squares={board} onSquareClick={(sIdx) => handleUltimateClick(bIdx, sIdx)} gridSize={gridSize} disabled={!!ultimateWinners[bIdx]} />
                 </div>
               ))}
@@ -481,6 +599,9 @@ function Game() {
             setPlayers={setPlayerConfig}
             variant={variant} setVariant={setVariant}
             gridSize={gridSize} setGridSize={setGridSize}
+            colorX={colorX} setColorX={setColorX}
+            colorO={colorO} setColorO={setColorO}
+            playerConfig={playerConfig}
             onStart={onStart}
           />
         )}
