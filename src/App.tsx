@@ -366,7 +366,7 @@ function Game() {
     }
   };
 
-  const findBestMove = (board: Array<string | null>, player: Player): number | null => {
+  const findBestMove = (board: Array<string | null>, player: string): number | null => {
     let bestScore = -Infinity;
     let moves: number[] = [];
     const opponent = player === 'X' ? 'O' : 'X';
