@@ -168,21 +168,46 @@ function Game() {
 
   const evaluateBoard = (board: Array<string | null>, player: string, opponent: string): number => {
     let score = 0;
+    const size = gridSize;
+    const condition = winCondition;
+
     const checkLine = (line: Array<string | null>) => {
       let pCount = 0, oCount = 0;
       line.forEach(cell => { if (cell === player) pCount++; if (cell === opponent) oCount++; });
       if (pCount > 0 && oCount > 0) return 0;
-      return pCount > 0 ? Math.pow(10, pCount) : -Math.pow(10, oCount);
+      if (pCount > 0) return Math.pow(10, pCount + 0.5);
+      if (oCount > 0) return -Math.pow(10, oCount); // Balanced proactive weight
+      return 0;
     };
 
-    for (let r = 0; r < gridSize; r++) {
-      for (let c = 0; c <= gridSize - winCondition; c++) {
-        score += checkLine(board.slice(r * gridSize + c, r * gridSize + c + winCondition));
-        const colLine = [];
-        for (let i = 0; i < winCondition; i++) colLine.push(board[(c + i) * gridSize + r]);
-        score += checkLine(colLine);
+    // Rows
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c <= size - condition; c++) {
+        score += checkLine(board.slice(r * size + c, r * size + c + condition));
       }
     }
+    // Cols
+    for (let c = 0; c < size; c++) {
+      for (let r = 0; r <= size - condition; r++) {
+        const line = [];
+        for (let i = 0; i < condition; i++) line.push(board[(r + i) * size + c]);
+        score += checkLine(line);
+      }
+    }
+    // Diagonals
+    for (let r = 0; r <= size - condition; r++) {
+      for (let c = 0; c <= size - condition; c++) {
+        const line1 = [];
+        const line2 = [];
+        for (let i = 0; i < condition; i++) {
+          line1.push(board[(r + i) * size + (c + i)]);
+          line2.push(board[(r + (condition - 1 - i)) * size + (c + i)]);
+        }
+        score += checkLine(line1);
+        score += checkLine(line2);
+      }
+    }
+
     return score;
   };
 
@@ -218,9 +243,11 @@ function Game() {
   };
 
   const findBestMove = (board: Array<string | null>, player: Player): number | null => {
-    let bestScore = -Infinity, move = null;
+    let bestScore = -Infinity;
+    let moves: number[] = [];
     const opponent = player === 'X' ? 'O' : 'X';
     const available = board.map((s, i) => s === null ? i : null).filter(i => i !== null) as number[];
+
     available.sort((a, b) => {
       const dist = (i: number) => Math.abs(Math.floor(i / gridSize) - gridSize / 2) + Math.abs((i % gridSize) - gridSize / 2);
       return dist(a) - dist(b);
@@ -230,9 +257,16 @@ function Game() {
       board[i] = player;
       let score = alphaBeta(board, 0, -Infinity, Infinity, false, player, opponent);
       board[i] = null;
-      if (score > bestScore) { bestScore = score; move = i; }
+      if (score > bestScore) {
+        bestScore = score;
+        moves = [i];
+      } else if (score === bestScore) {
+        moves.push(i);
+      }
     }
-    return move;
+
+    // Pick randomly from best moves to add variety
+    return moves.length > 0 ? moves[Math.floor(Math.random() * moves.length)] : null;
   };
 
   useEffect(() => {
@@ -286,26 +320,75 @@ function Game() {
     }
   };
 
-  // Ultimate AI
+  // Ultimate AI Logic: Strategic sub-board play
   useEffect(() => {
     if (!isPlaying || !variant.startsWith('ultimate')) return;
     const winner = calculateWinner(ultimateWinners, 3, 3);
     if (winner || ultimateWinners.every(w => w !== null)) return;
 
     if ((playerConfig === 'human_vs_ai' && !xIsNext) || playerConfig === 'ai_vs_ai') {
-      const boardsToConsider = (variant === 'ultimate' && activeBoard !== null)
-        ? [activeBoard]
-        : ultimateWinners.map((w, idx) => w === null ? idx : null).filter(idx => idx !== null) as number[];
+      const currentPlayer = xIsNext ? 'X' : 'O';
+      const opponentPlayer = xIsNext ? 'O' : 'X';
 
       const timeout = setTimeout(() => {
-        const randomBoard = boardsToConsider[Math.floor(Math.random() * boardsToConsider.length)];
-        const availableSquares = ultimateBoards[randomBoard].map((s, idx) => s === null ? idx : null).filter(idx => idx !== null) as number[];
-        const randomSquare = availableSquares[Math.floor(Math.random() * availableSquares.length)];
-        handleUltimateClick(randomBoard, randomSquare, true);
+        const possibleBoards = (variant === 'ultimate' && activeBoard !== null)
+          ? [activeBoard]
+          : ultimateWinners.map((w, idx) => w === null ? idx : null).filter(idx => idx !== null) as number[];
+
+        // Strategy for Ultimate:
+        // 1. Can I win a sub-board now?
+        // 2. Can I block opponent from winning a sub-board?
+        // 3. Otherwise, pick a move that doesn't send opponent to a winning sub-board
+
+        let bestMove: { bIdx: number, sIdx: number } | null = null;
+        let candidates: { bIdx: number, sIdx: number }[] = [];
+
+        for (const bIdx of possibleBoards) {
+          const availableSquares = ultimateBoards[bIdx].map((s, idx) => s === null ? idx : null).filter(idx => idx !== null) as number[];
+          for (const sIdx of availableSquares) {
+            const nextSubBoard = ultimateBoards[bIdx].slice();
+            nextSubBoard[sIdx] = currentPlayer;
+
+            if (calculateWinner(nextSubBoard, gridSize, winCondition) === currentPlayer) {
+              candidates.push({ bIdx, sIdx });
+            }
+          }
+        }
+
+        if (candidates.length === 0) {
+          // Look for blocks
+          for (const bIdx of possibleBoards) {
+            const availableSquares = ultimateBoards[bIdx].map((s, idx) => s === null ? idx : null).filter(idx => idx !== null) as number[];
+            for (const sIdx of availableSquares) {
+              const nextSubBoard = ultimateBoards[bIdx].slice();
+              nextSubBoard[sIdx] = opponentPlayer;
+              if (calculateWinner(nextSubBoard, gridSize, winCondition) === opponentPlayer) {
+                candidates.push({ bIdx, sIdx });
+              }
+            }
+          }
+        }
+
+        if (candidates.length > 0) {
+          bestMove = candidates[Math.floor(Math.random() * candidates.length)];
+        } else {
+          // Semi-random from all available options
+          const allOptions: { bIdx: number, sIdx: number }[] = [];
+          for (const bIdx of possibleBoards) {
+            const availableSquares = ultimateBoards[bIdx].map((s, idx) => s === null ? idx : null).filter(idx => idx !== null) as number[];
+            availableSquares.forEach(sIdx => allOptions.push({ bIdx, sIdx }));
+          }
+          // Avoid moves that send player to won/full sub-boards if possible
+          const safeOptions = allOptions.filter(opt => !ultimateWinners[opt.sIdx % 9]);
+          const currentOptions = safeOptions.length > 0 ? safeOptions : allOptions;
+          bestMove = currentOptions[Math.floor(Math.random() * currentOptions.length)];
+        }
+
+        if (bestMove) handleUltimateClick(bestMove.bIdx, bestMove.sIdx, true);
       }, 600);
       return () => clearTimeout(timeout);
     }
-  }, [xIsNext, ultimateBoards, ultimateWinners, activeBoard, isPlaying, variant]);
+  }, [xIsNext, ultimateBoards, ultimateWinners, activeBoard, isPlaying, variant, gridSize, winCondition, calculateWinner]);
 
   const restartGame = () => {
     setSquares(Array(gridSize * gridSize).fill(null));
