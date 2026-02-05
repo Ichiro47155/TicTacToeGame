@@ -262,6 +262,42 @@ function Game() {
       }
     }
 
+    // Clustering bonus: Reward moves adjacent to existing pieces
+    // This encourages the AI to group its pieces together for better line formation
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === player) {
+        const r = Math.floor(i / size);
+        const c = i % size;
+
+        // Check all 8 adjacent positions (horizontal, vertical, diagonal)
+        const adjacentOffsets = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1], [0, 1],
+          [1, -1], [1, 0], [1, 1]
+        ];
+
+        for (const [dr, dc] of adjacentOffsets) {
+          const newR = r + dr;
+          const newC = c + dc;
+
+          // Check if adjacent position is within bounds
+          if (newR >= 0 && newR < size && newC >= 0 && newC < size) {
+            const adjIdx = newR * size + newC;
+
+            // Bonus for having another player piece adjacent
+            if (board[adjIdx] === player) {
+              score += 3; // Clustering bonus
+            }
+
+            // Smaller bonus for empty adjacent spaces (potential for expansion)
+            if (board[adjIdx] === null) {
+              score += 0.5;
+            }
+          }
+        }
+      }
+    }
+
     // Rows
     for (let r = 0; r < size; r++) {
       for (let c = 0; c <= size - condition; c++) {
