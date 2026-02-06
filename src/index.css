@@ -45,7 +45,7 @@
 
 body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -56,11 +56,6 @@ body {
   color: var(--text-color);
   font-family: 'Inter', sans-serif;
   transition: background 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Vibrant glow only during gameplay */
-body.playing {
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--current-player-color, var(--accent-color)), transparent 65%) 0%, var(--bg-color) 85%);
 }
 
 .game-wrapper {
